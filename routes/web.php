@@ -19,5 +19,10 @@ Route::get('/', function () {
 });
 
 
-
-Route::post('/incidencias', [IncidenciaController::class, 'store']);
+Route::controller(IncidenciaController::class)->group(function () {
+    Route::get('/incidencias', [IncidenciaController::class, 'index']);
+    Route::post('/incidencias', [IncidenciaController::class, 'store']);
+    Route::get('/incidencias/{incidencia}', [IncidenciaController::class, 'show']);
+    Route::patch('/incidencias/{incidencia}', [IncidenciaController::class, 'update']);
+    Route::delete('/incidencias/{incidencia}', [IncidenciaController::class, 'destroy']);
+});
