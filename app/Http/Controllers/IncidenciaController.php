@@ -5,11 +5,13 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Incidencia;
 use Illuminate\Http\JsonResponse;
+use App\Mail\TestMail;
+use Illuminate\Support\Facades\Mail;
 
 class IncidenciaController extends Controller
 {
     public function index(){
-        return Incidencia::select('id', 'titulo', 'descripcion', 'urgencia')->get();
+        return Incidencia::all();
     }
     public function store(Request $request): JsonResponse
     {
@@ -20,13 +22,30 @@ class IncidenciaController extends Controller
             'urgencia' => 'required|string|in:Baja,Media,Alta,Muy Alta',
         ]);
 
-        // Crear la incidencia en la base de datos
-        $incidencia = Incidencia::create($validated);
+        try{
+            $incidencia = Incidencia::create($request->all());
+            $subject = "Incidencia creada";
+            $cuerpoMensaje = (object)[
+                'titulo' => 'Nueva Incidencia',
+                'detalles' => [
+                    'id' => "ID $incidencia->id",
+                    'descripcion' => "Descripcion : $incidencia->descripcion",
+                    'urgencia' => "Urgencia : $incidencia->urgencia",
+                ]
+            ];
+            $colorTitulo = "titulo-estandar";
+            $this->enviarMail($subject,$cuerpoMensaje,$colorTitulo);
 
-        return response()->json([
-            "message" => "Incidencia creada",
-            "incidencia" => $incidencia
-        ], 201);
+            return response()->json([
+                "message" => $subject,
+                "incidencia" => $incidencia
+            ], 201);
+        }
+        catch(\Exception $e){
+            return response()->json([
+                "message" => $e->getMessage(),
+            ], 403);
+        }
     }
 
 /**
@@ -68,9 +87,29 @@ class IncidenciaController extends Controller
      */
     public function destroy(Incidencia $incidencia): JsonResponse
     {
+        $id = $incidencia->id;
+        $titulo = $incidencia->titulo;
         $incidencia->delete();
+        $subject = "Incidencia Eliminada";
+        $cuerpoMensaje = (object)[
+            'titulo' => 'Se Ha Eliminado Una incidencia',
+            'detalles' => [
+                'id' => "ID : $id",
+                'descripcion' => "Titulo : $titulo"
+            ]
+        ];
+        $colorTitulo = "titulo-eliminado";
+        $this->enviarMail($subject,$cuerpoMensaje,$colorTitulo);
         
         return response()->json(null, 204);
     }
+
+
+    public function enviarMail($subject,$cuerpoMensaje,$colorTitulo){
+        $mail = new TestMail($subject,$cuerpoMensaje,$colorTitulo);
+        Mail::to('destinatario@example.com')->send($mail);
+    }
 }
+
+
 
