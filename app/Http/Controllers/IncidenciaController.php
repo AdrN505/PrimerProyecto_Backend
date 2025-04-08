@@ -10,8 +10,47 @@ use Illuminate\Support\Facades\Mail;
 
 class IncidenciaController extends Controller
 {
-    public function index(){
-        return Incidencia::all();
+    public function index(Request $request)
+    {
+        // Obtener parámetros de paginación
+        $perPage = $request->input('per_page', 5); // Por defecto 5 items por página
+        $page = $request->input('page', 1); // Por defecto página 1
+        
+        // Obtener parámetros de filtrado
+        $searchTerm = $request->input('search', '');
+        $urgencia = $request->input('urgencia', []); // Puede ser un array de urgencias
+        
+        // Iniciar la consulta
+        $query = Incidencia::query();
+        
+        // Aplicar filtro de búsqueda
+        if (!empty($searchTerm)) {
+            $query->where(function($q) use ($searchTerm) {
+                $q->where('titulo', 'LIKE', "%{$searchTerm}%")
+                ->orWhere('id', 'LIKE', "%{$searchTerm}%");
+            });
+        }
+        
+        // Aplicar filtro de urgencia
+        if (!empty($urgencia)) {
+            if (is_array($urgencia)) {
+                $query->whereIn('urgencia', $urgencia);
+            } else {
+                $query->where('urgencia', $urgencia);
+            }
+        }
+        
+        // Ejecutar la consulta con paginación
+        $incidencias = $query->paginate($perPage);
+        
+        // Devolver resultados paginados
+        return response()->json([
+            'data' => $incidencias->items(),
+            'total' => $incidencias->total(),
+            'per_page' => $incidencias->perPage(),
+            'current_page' => $incidencias->currentPage(),
+            'last_page' => $incidencias->lastPage()
+        ]);
     }
     public function store(Request $request): JsonResponse
     {
@@ -110,6 +149,3 @@ class IncidenciaController extends Controller
         Mail::to('destinatario@example.com')->send($mail);
     }
 }
-
-
-
